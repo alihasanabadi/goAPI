@@ -40,6 +40,14 @@ type JsonResponse struct {
 // Main function
 func main() {
 
+	http.HandleFunc("/login", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == "POST" {
+
+			LoginCheck(w, r)
+		}
+
+	})
+
 	http.HandleFunc("/posts", func(w http.ResponseWriter, r *http.Request) {
 
 		if r.Method == "GET" {
@@ -204,4 +212,48 @@ func UpdatePost(w http.ResponseWriter, r *http.Request) {
 	}
 
 	json.NewEncoder(w).Encode(response)
+}
+
+func LoginCheck(w http.ResponseWriter, r *http.Request) {
+
+	userName := r.FormValue("username")
+	passWord := r.FormValue("password")
+
+	var response = JsonResponse{}
+
+	if userName == "" || passWord == "" {
+		response = JsonResponse{Type: "error", Message: "You are missing username or password parameter."}
+		//response = JsonResponse{Type: "error", Message: postID}
+	} else {
+		db := setupDB()
+
+		printMessage("login Cheking ...")
+
+		rows, err := db.Query("SELECT password FROM users WHERE username = $1;", userName)
+
+		for rows.Next() {
+			var passwd string
+
+			err = rows.Scan(&passwd)
+
+			// check errors
+			checkErr(err)
+
+			if passwd == passWord {
+
+				response = JsonResponse{Type: "success", Message: "successfully loged in"}
+			} else {
+
+				response = JsonResponse{Type: "no success", Message: "The username or Password is incorrect!!!"}
+
+			}
+		}
+
+		// check errors
+		checkErr(err)
+
+	}
+
+	json.NewEncoder(w).Encode(response)
+
 }
